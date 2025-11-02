@@ -52,12 +52,14 @@ class Settings(BaseSettings):
             "case_sensitive": False,
             "env_file_encoding": "utf-8",
             "env_prefix": "",  # No prefix needed
+            "extra": "ignore",  # Ignore extra fields from .env file
         }
     else:
         class Config:
             """Pydantic v1 config."""
             env_file = ".env"
             case_sensitive = False
+            extra = "ignore"  # Ignore extra fields from .env file
             # For v1, env variables are automatically mapped from field names
             fields = {
                 'kaggle_username': {'env': 'KAGGLE_USERNAME'},

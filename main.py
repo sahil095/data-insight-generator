@@ -24,7 +24,7 @@ def run_langgraph_workflow(query: str, output_dir: Path) -> None:
     
     coordinator = LangGraphCoordinator()
     result = coordinator.run(query)
-    
+    print(result)
     # Save results
     output_dir.mkdir(parents=True, exist_ok=True)
     
