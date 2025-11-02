@@ -26,11 +26,13 @@ class Settings(BaseSettings):
     # API Keys
     kaggle_username: Optional[str] = Field(default=None, description="Kaggle username")
     kaggle_key: Optional[str] = Field(default=None, description="Kaggle API key")
+    groq_api_key: Optional[str] = Field(default=None, description="Groq API key (default provider)")
     openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key")
     data_gov_api_key: Optional[str] = Field(default=None, description="Data.gov API key (optional)")
     
     # Model Configuration
-    llm_model: str = Field(default="gpt-4", description="LLM model to use for analysis")
+    llm_provider: str = Field(default="groq", description="LLM provider: 'groq' (default) or 'openai'")
+    llm_model: str = Field(default="llama-3.3-70b-versatile", description="LLM model name (Groq: llama-3.3-70b-versatile, llama-3.1-70b-versatile, etc. OpenAI: gpt-4, gpt-3.5-turbo)")
     llm_temperature: float = Field(default=0.7, description="Temperature for LLM generation")
     
     # Paths
@@ -64,8 +66,10 @@ class Settings(BaseSettings):
             fields = {
                 'kaggle_username': {'env': 'KAGGLE_USERNAME'},
                 'kaggle_key': {'env': 'KAGGLE_KEY'},
+                'groq_api_key': {'env': 'GROQ_API_KEY'},
                 'openai_api_key': {'env': 'OPENAI_API_KEY'},
                 'data_gov_api_key': {'env': 'DATA_GOV_API_KEY'},
+                'llm_provider': {'env': 'LLM_PROVIDER'},
                 'llm_model': {'env': 'LLM_MODEL'},
                 'llm_temperature': {'env': 'LLM_TEMPERATURE'},
             }
@@ -74,8 +78,15 @@ class Settings(BaseSettings):
         """Validate required settings."""
         errors = []
         
-        if not self.openai_api_key:
-            errors.append("OPENAI_API_KEY is required")
+        # Validate LLM provider settings
+        if self.llm_provider.lower() == "groq":
+            if not self.groq_api_key:
+                errors.append("GROQ_API_KEY is required when using Groq provider")
+        elif self.llm_provider.lower() == "openai":
+            if not self.openai_api_key:
+                errors.append("OPENAI_API_KEY is required when using OpenAI provider")
+        else:
+            errors.append(f"Invalid LLM provider: {self.llm_provider}. Must be 'groq' or 'openai'")
         
         # Kaggle credentials are optional but recommended for Kaggle datasets
         if not self.kaggle_username or not self.kaggle_key:

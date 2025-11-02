@@ -48,10 +48,13 @@ notepad .env
 nano .env
 ```
 
-Add your API keys (minimum OpenAI API key is required):
+Add your API keys (Groq API key is required by default, or OpenAI for alternative):
 
 ```env
-# Required for LLM features
+# Required for LLM features (default: Groq with Llama models)
+GROQ_API_KEY=your_groq_api_key_here
+
+# Optional - Use OpenAI instead (set LLM_PROVIDER=openai)
 OPENAI_API_KEY=your_openai_api_key_here
 
 # Optional - for Kaggle datasets
@@ -61,20 +64,29 @@ KAGGLE_KEY=your_kaggle_api_key
 # Optional - for Data.gov (usually not needed)
 DATA_GOV_API_KEY=your_data_gov_key
 
-# Optional - LLM model configuration
-LLM_MODEL=gpt-4
+# Optional - LLM provider and model configuration
+LLM_PROVIDER=groq  # or 'openai'
+LLM_MODEL=llama-3.3-70b-versatile  # Groq: llama-3.3-70b-versatile, llama-3.1-70b-versatile | OpenAI: gpt-4, gpt-3.5-turbo
 LLM_TEMPERATURE=0.7
 ```
 
 ### Getting API Keys:
 
-1. **OpenAI API Key:**
+1. **Groq API Key (Default - Recommended):**
+   - Go to https://console.groq.com/keys
+   - Sign up/login (free account available)
+   - Create a new API key
+   - Copy and paste into `.env` as `GROQ_API_KEY`
+   - Provides fast access to Llama models
+
+2. **OpenAI API Key (Alternative):**
    - Go to https://platform.openai.com/api-keys
    - Sign up/login
    - Create a new API key
-   - Copy and paste into `.env`
+   - Copy and paste into `.env` as `OPENAI_API_KEY`
+   - Set `LLM_PROVIDER=openai` in `.env` to use OpenAI
 
-2. **Kaggle API Key (Optional):**
+3. **Kaggle API Key (Optional):**
    - Go to https://www.kaggle.com/settings
    - Scroll to "API" section
    - Click "Create New Token"
@@ -203,8 +215,10 @@ Evaluation Summary:
 
 ## Troubleshooting
 
-### Error: "OPENAI_API_KEY is required"
-- Make sure your `.env` file exists and contains `OPENAI_API_KEY=your_key`
+### Error: "GROQ_API_KEY is required" or "OPENAI_API_KEY is required"
+- Make sure your `.env` file exists and contains the appropriate API key
+- Default provider is Groq - add `GROQ_API_KEY=your_key`
+- To use OpenAI instead, set `LLM_PROVIDER=openai` and add `OPENAI_API_KEY=your_key`
 - Check that the `.env` file is in the project root directory
 
 ### Error: "LangGraph not available"

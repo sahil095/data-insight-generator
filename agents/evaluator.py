@@ -6,6 +6,7 @@ from openai import OpenAI
 from evaluation.llm_judge import LLMJudge
 from evaluation.numeric_validator import NumericValidator
 from config.settings import settings
+from utils.llm_client import UnifiedLLMClient
 
 
 class EvaluationResult(BaseModel):
@@ -32,7 +33,11 @@ class EvaluatorAgent:
     
     def __init__(self):
         """Initialize the evaluator agent."""
-        self.client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+        try:
+            self.client = UnifiedLLMClient()
+        except Exception as e:
+            print(f"Warning: LLM client initialization failed: {e}")
+            self.client = None
         self.llm_judge = LLMJudge()
         self.numeric_validator = NumericValidator()
         
@@ -205,14 +210,13 @@ Respond in JSON format:
 }}"""
 
         try:
-            response = self.client.chat.completions.create(
-                model=settings.llm_model,
+            response = self.client.chat_completions_create(
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                response_format={"type": "json_object"} if hasattr(self.client.chat.completions.create, "__code__") else None
+                response_format={"type": "json_object"}
             )
             
             content = response.choices[0].message.content.strip()

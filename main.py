@@ -24,7 +24,7 @@ def run_langgraph_workflow(query: str, output_dir: Path) -> None:
     
     coordinator = LangGraphCoordinator()
     result = coordinator.run(query)
-    print(result)
+    # print(result)
     # Save results
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -40,7 +40,7 @@ def run_langgraph_workflow(query: str, output_dir: Path) -> None:
         auditor = AuditorAgent()
         report = auditor.generate_validation_report(result["auditor_output"])
         report_path = output_dir / "validation_report.txt"
-        with open(report_path, 'w') as f:
+        with open(report_path, 'w', encoding='utf-8') as f:
             f.write(report)
         print(f"✓ Validation report saved to: {report_path}")
     
@@ -49,11 +49,11 @@ def run_langgraph_workflow(query: str, output_dir: Path) -> None:
         evaluator = EvaluatorAgent()
         eval_report = evaluator.generate_evaluation_report(result["evaluator_output"])
         eval_path = output_dir / "evaluation_report.txt"
-        with open(eval_path, 'w') as f:
+        with open(eval_path, 'w', encoding='utf-8') as f:
             f.write(eval_report)
         
         eval_json_path = output_dir / "evaluation_results.json"
-        with open(eval_json_path, 'w') as f:
+        with open(eval_json_path, 'w', encoding='utf-8') as f:
             json.dump(result["evaluator_output"], f, indent=2, default=str)
         
         print(f"✓ Evaluation report saved to: {eval_path}")
@@ -252,7 +252,7 @@ def main():
         # Generate validation report
         report = auditor.generate_validation_report(validation_results)
         report_path = output_dir / "validation_report.txt"
-        with open(report_path, 'w') as f:
+        with open(report_path, 'w', encoding='utf-8') as f:
             f.write(report)
         
         print(f"✓ Audit complete")
@@ -292,13 +292,13 @@ def main():
         
         # Save evaluation results
         eval_path = output_dir / "evaluation_results.json"
-        with open(eval_path, 'w') as f:
+        with open(eval_path, 'w', encoding='utf-8') as f:
             json.dump(evaluation_results, f, indent=2, default=str)
         
         # Generate evaluation report
         eval_report = evaluator.generate_evaluation_report(evaluation_results)
         eval_report_path = output_dir / "evaluation_report.txt"
-        with open(eval_report_path, 'w') as f:
+        with open(eval_report_path, 'w', encoding='utf-8') as f:
             f.write(eval_report)
         
         print(f"✓ Evaluation complete")

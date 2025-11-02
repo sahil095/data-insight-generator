@@ -32,7 +32,22 @@ class MCPServer:
     
     def _initialize_agents(self):
         """Initialize Autogen agents."""
-        if not AUTOGEN_AVAILABLE or not settings.openai_api_key:
+        if not AUTOGEN_AVAILABLE:
+            return
+        
+        # Get appropriate API key based on provider
+        if settings.llm_provider.lower() == "groq":
+            api_key = settings.groq_api_key
+            if not api_key:
+                print("Warning: Groq API key not set. Autogen agents will not be initialized.")
+                return
+        elif settings.llm_provider.lower() == "openai":
+            api_key = settings.openai_api_key
+            if not api_key:
+                print("Warning: OpenAI API key not set. Autogen agents will not be initialized.")
+                return
+        else:
+            print(f"Warning: Unknown LLM provider: {settings.llm_provider}")
             return
         
         # Create system messages for each agent type
@@ -63,7 +78,7 @@ class MCPServer:
                 system_message=collector_system_message,
                 llm_config={
                     "model": settings.llm_model,
-                    "api_key": settings.openai_api_key,
+                    "api_key": api_key,
                     "temperature": settings.llm_temperature
                 }
             )
@@ -73,7 +88,7 @@ class MCPServer:
                 system_message=analyst_system_message,
                 llm_config={
                     "model": settings.llm_model,
-                    "api_key": settings.openai_api_key,
+                    "api_key": api_key,
                     "temperature": settings.llm_temperature
                 }
             )
@@ -83,7 +98,7 @@ class MCPServer:
                 system_message=auditor_system_message,
                 llm_config={
                     "model": settings.llm_model,
-                    "api_key": settings.openai_api_key,
+                    "api_key": api_key,
                     "temperature": settings.llm_temperature
                 }
             )
@@ -105,7 +120,7 @@ class MCPServer:
                 groupchat=self.group_chat,
                 llm_config={
                     "model": settings.llm_model,
-                    "api_key": settings.openai_api_key,
+                    "api_key": api_key,
                     "temperature": settings.llm_temperature
                 }
             )

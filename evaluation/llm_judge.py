@@ -1,7 +1,7 @@
 """LLM-as-a-judge evaluation for insight quality."""
 import json
 from typing import Dict, Any, Optional
-from openai import OpenAI
+from utils.llm_client import UnifiedLLMClient
 from config.settings import settings
 
 
@@ -10,9 +10,11 @@ class LLMJudge:
     
     def __init__(self):
         """Initialize the LLM judge."""
-        self.client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
-        if not self.client:
-            print("Warning: OpenAI API key not set. LLM judge evaluation will be limited.")
+        try:
+            self.client = UnifiedLLMClient()
+        except Exception as e:
+            print(f"Warning: LLM client initialization failed: {e}")
+            self.client = None
     
     def evaluate_insight_quality(
         self,
@@ -102,14 +104,13 @@ Respond in JSON format:
 }}"""
 
         try:
-            response = self.client.chat.completions.create(
-                model=settings.llm_model,
+            response = self.client.chat_completions_create(
                 messages=[
                     {"role": "system", "content": "You are an expert evaluator of data analysis insights. Provide clear, structured feedback."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,  # Lower temperature for more consistent evaluation
-                response_format={"type": "json_object"} if hasattr(self.client.chat.completions.create, "__code__") else None
+                response_format={"type": "json_object"}
             )
             
             content = response.choices[0].message.content.strip()
@@ -187,8 +188,7 @@ Respond in JSON format:
 }}"""
 
         try:
-            response = self.client.chat.completions.create(
-                model=settings.llm_model,
+            response = self.client.chat_completions_create(
                 messages=[
                     {"role": "system", "content": "You are an expert at validating data insights against actual statistics."},
                     {"role": "user", "content": prompt}

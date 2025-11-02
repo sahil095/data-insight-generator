@@ -9,6 +9,7 @@ kaggle>=1.5.0
 requests>=2.31.0
 
 # LLM and MCP
+groq>=0.4.0
 openai>=1.0.0
 langchain>=0.1.0
 langgraph>=0.0.20

@@ -62,10 +62,22 @@ pip install -r requirements.txt
 2. **Set up API credentials:**
 Create a `.env` file in the project root:
 ```
+# Required for LLM features (default: Groq)
+GROQ_API_KEY=your_groq_api_key
+
+# Optional - Use OpenAI instead (set LLM_PROVIDER=openai)
+OPENAI_API_KEY=your_openai_api_key
+
+# Optional - for Kaggle datasets
 KAGGLE_USERNAME=your_kaggle_username
 KAGGLE_KEY=your_kaggle_key
-OPENAI_API_KEY=your_openai_api_key
-DATA_GOV_API_KEY=your_data_gov_key  # Optional
+
+# Optional - for Data.gov
+DATA_GOV_API_KEY=your_data_gov_key
+
+# Optional - LLM configuration
+LLM_PROVIDER=groq  # or 'openai'
+LLM_MODEL=llama-3.3-70b-versatile  # Groq: llama-3.3-70b-versatile | OpenAI: gpt-4
 ```
 
 3. **Run with query-based input (recommended):**

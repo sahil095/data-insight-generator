@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any, Optional
-from openai import OpenAI
 from tools.visualization import VisualizationTool
 from utils.helpers import format_number, get_data_summary
+from utils.llm_client import UnifiedLLMClient
 from config.settings import settings
 
 
@@ -15,7 +15,11 @@ class AnalystAgent:
     
     def __init__(self):
         """Initialize the analyst agent."""
-        self.client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+        try:
+            self.client = UnifiedLLMClient()
+        except Exception as e:
+            print(f"Warning: LLM client initialization failed: {e}")
+            self.client = None
         self.visualization_tool = VisualizationTool()
     
     def analyze(
@@ -156,13 +160,11 @@ Generate insights that:
 
 Format your response as clear, well-structured paragraphs."""
 
-            response = self.client.chat.completions.create(
-                model=settings.llm_model,
+            response = self.client.chat_completions_create(
                 messages=[
                     {"role": "system", "content": "You are a data analyst expert at generating clear, accurate insights from dataset statistics."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=settings.llm_temperature,
                 max_tokens=1000
             )
             
@@ -250,6 +252,6 @@ Format your response as clear, well-structured paragraphs."""
         
         serializable_insights = convert_to_serializable(insights)
         
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(serializable_insights, f, indent=2)
 
