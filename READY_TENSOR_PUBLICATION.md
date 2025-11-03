@@ -241,6 +241,84 @@ Recent dry runs on U.S. renewable energy datasets demonstrate the end-to-end loo
 - Numeric accuracy: 98%
 ```
 
+## Current State Gap Identification
+
+Open government analytics typically lean on ad-hoc spreadsheets or isolated BI dashboards, which seldom guarantee license compliance, numeric validation, or reproducible prompt histories. The Open Data Insight Generator closes that gap by encoding each analyst role as an auditable agent with typed state transitions, something absent in most tooling meant for Data.gov exploration.
+
+- Manual CKAN workflows download resources without automated guardrails, whereas the collector here enforces license and file-type checks before admitting data downstream.
+- BI tools such as Tableau or Power BI surface visuals but lack automated verifiers similar to the Auditor Agent’s confidence-scored discrepancy log.
+- LLM summarizers focus on narrative output yet rarely cross-check claims against raw data; the Evaluator Agent combines numeric and qualitative validation to provide those assurances.
+
+```69:105:agents/auditor.py
+        result = {
+            "overall_valid": True,
+            "confidence_score": 1.0,
+            "statistical_checks": [],
+            "numeric_checks": [],
+            "errors": [],
+            "warnings": [],
+            "discrepancies": []
+        }
+        # ... existing code ...
+        if result["errors"]:
+            result["overall_valid"] = False
+        return result
+```
+
+## Comparative Analysis
+
+| Baseline | Strength | Gap Addressed by This Project |
+| --- | --- | --- |
+| Manual Data.gov downloads | Direct access to authoritative datasets | No automated license verification, cleaning, or audit trail; this pipeline automates those steps via the Data Collector Guardrails. |
+| Tableau / Power BI dashboards | Rich visualization tooling | Require pre-processed data and manual statistical validation; Analyst + Auditor Agents automate statistical checks and produce machine-readable reports. |
+| CKAN-based CKAN Harvester scripts | Automated ingestion | Focus on metadata sync, not insight generation or validation; our multi-agent chain delivers insights, audits, and evaluation artifacts. |
+| Single-agent LLM summarizers | Fast narrative generation | Often hallucinate or misstate figures; Evaluator + NumericValidator modules constrain narratives with numeric cross-checks. |
+| Kaggle notebooks | Flexible analysis environment | Depend on expert intervention, lacking turnkey orchestration; LangGraph coordination provides reusable, query-driven workflows. |
+
+```55:68:mcp/langgraph_coordinator.py
+        workflow.add_edge("data_collector", "analyst")
+        workflow.add_edge("analyst", "auditor")
+        workflow.add_edge("auditor", "evaluator")
+        workflow.add_edge("evaluator", END)
+```
+
+## Limitations Discussion
+
+- **Dataset search coverage:** Kaggle query-based search remains unimplemented (`NotImplementedError`), so operators must supply explicit dataset names; extending `fetch_by_query` is a priority.
+- **LLM dependency:** Insight and evaluation quality hinge on availability and stability of the configured LLM provider. If API quotas are exhausted, the system falls back to template messaging with reduced expressiveness.
+- **Numeric validation heuristics:** Regex-based extraction in `NumericValidator` may miss complex claims, potentially under-reporting discrepancies; augmenting it with structured parsing or semantic tagging would improve recall.
+- **Visualization scope:** Automated charts focus on numeric distributions and correlations, which may not capture geospatial or network relationships present in some civic datasets.
+- **Operational observability:** While reports are persisted, there is no built-in telemetry export to monitoring stacks; integrating with metrics pipelines would ease production operations.
+
+```66:69:agents/data_collector.py
+        elif source.lower() == "kaggle":
+            # For Kaggle, would need to search - simplified for now
+            raise NotImplementedError("Kaggle query search not yet implemented")
+```
+
+```132:144:utils/llm_client.py
+        if self.provider == LLMProvider.GROQ.value:
+            if not settings.groq_api_key:
+                raise ValueError("GROQ_API_KEY is required for Groq provider")
+            self.client = Groq(api_key=settings.groq_api_key)
+        elif self.provider == LLMProvider.OPENAI.value:
+            if not settings.openai_api_key:
+                raise ValueError("OPENAI_API_KEY is required for OpenAI provider")
+            self.client = OpenAI(api_key=settings.openai_api_key)
+```
+
+```132:211:evaluation/numeric_validator.py
+        patterns = [
+            (r'(?:mean|average|avg)[:\s]*([+-]?\d+\.?\d*)', 'mean'),
+            (r'(?:std|standard deviation)[:\s]*([+-]?\d+\.?\d*)', 'std'),
+            (r'(?:count|total)[:\s]*(\d+)', 'count'),
+            (r'(\d+\.?\d*)%', 'percentage'),
+        ]
+        for pattern, claim_type in patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            # ... existing code ...
+```
+
 ## Examples (2-3 use queries with expected output)
 
 - `Analyze open data about U.S. renewable energy consumption from 2020 onward` → Fetches DOE renewable production tables, produces growth-rate commentary, and exports heatmaps plus a 0.95-confidence audit report.
