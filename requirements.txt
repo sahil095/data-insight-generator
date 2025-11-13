@@ -27,3 +27,7 @@ pyyaml>=6.0.0
 scipy>=1.11.0
 scikit-learn>=1.3.0
 
+# Streamlit and PDF generation
+streamlit>=1.28.0
+reportlab>=4.0.0
+

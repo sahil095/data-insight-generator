@@ -25,7 +25,8 @@ class AnalystAgent:
     def analyze(
         self,
         datasets: Dict[str, pd.DataFrame],
-        generate_visualizations: bool = True
+        generate_visualizations: bool = True,
+        query: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Analyze datasets and generate insights.
@@ -33,6 +34,7 @@ class AnalystAgent:
         Args:
             datasets: Dictionary mapping dataset names to DataFrames
             generate_visualizations: Whether to generate visualizations
+            query: Optional user query to guide analysis
             
         Returns:
             Dictionary with insights for each dataset
@@ -49,7 +51,7 @@ class AnalystAgent:
             visualization_paths = {}
             if generate_visualizations:
                 try:
-                    plots = self.visualization_tool.generate_summary_plots(df)
+                    plots = self.visualization_tool.generate_summary_plots(df, query=query)
                     visualization_paths = {k: str(v) for k, v in plots.items()}
                 except Exception as e:
                     print(f"  Warning: Visualization generation failed: {e}")
@@ -68,7 +70,7 @@ class AnalystAgent:
     
     def _compute_statistics(self, df: pd.DataFrame) -> Dict[str, Any]:
         """
-        Compute statistical measures for a DataFrame.
+        Compute comprehensive statistical measures for a DataFrame (Enhanced EDA).
         
         Args:
             df: DataFrame to analyze
@@ -76,44 +78,92 @@ class AnalystAgent:
         Returns:
             Dictionary with computed statistics
         """
+        # Basic EDA checks
+        total_rows = len(df)
+        total_cols = len(df.columns)
+        total_cells = total_rows * total_cols
+        
+        # NULL/Missing value analysis
+        null_counts = df.isnull().sum().to_dict()
+        null_percentages = {col: (count / total_rows * 100) if total_rows > 0 else 0 
+                           for col, count in null_counts.items()}
+        total_nulls = sum(null_counts.values())
+        null_percentage_total = (total_nulls / total_cells * 100) if total_cells > 0 else 0
+        
+        # Duplicate rows check
+        duplicate_count = df.duplicated().sum()
+        duplicate_percentage = (duplicate_count / total_rows * 100) if total_rows > 0 else 0
+        
         stats = {
             "shape": df.shape,
+            "row_count": int(total_rows),
+            "column_count": int(total_cols),
+            "total_cells": int(total_cells),
             "columns": list(df.columns),
             "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
-            "null_counts": df.isnull().sum().to_dict(),
+            "null_counts": null_counts,
+            "null_percentages": null_percentages,
+            "total_nulls": int(total_nulls),
+            "null_percentage_total": float(null_percentage_total),
+            "duplicate_rows": int(duplicate_count),
+            "duplicate_percentage": float(duplicate_percentage),
+            "memory_usage_bytes": int(df.memory_usage(deep=True).sum()),
             "numeric_statistics": {}
         }
         
         # Compute numeric statistics
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         if len(numeric_cols) > 0:
             numeric_stats = df[numeric_cols].describe().to_dict()
             stats["numeric_statistics"] = numeric_stats
             
-            # Additional statistics
+            # Additional statistics for each numeric column
             for col in numeric_cols:
-                stats["numeric_statistics"][col].update({
-                    "variance": float(df[col].var()) if not df[col].empty else None,
-                    "skewness": float(df[col].skew()) if len(df[col]) > 2 else None,
-                    "kurtosis": float(df[col].kurtosis()) if len(df[col]) > 2 else None,
-                })
+                col_data = df[col].dropna()
+                if len(col_data) > 0:
+                    stats["numeric_statistics"][col].update({
+                        "variance": float(df[col].var()) if len(col_data) > 1 else None,
+                        "skewness": float(df[col].skew()) if len(col_data) > 2 else None,
+                        "kurtosis": float(df[col].kurtosis()) if len(col_data) > 2 else None,
+                        "median": float(df[col].median()),
+                        "iqr": float(df[col].quantile(0.75) - df[col].quantile(0.25)),
+                        "null_count": int(null_counts.get(col, 0)),
+                        "null_percentage": float(null_percentages.get(col, 0)),
+                        "zeros": int((df[col] == 0).sum()),
+                        "negatives": int((df[col] < 0).sum()),
+                        "positives": int((df[col] > 0).sum()),
+                    })
         
         # Categorical statistics
-        categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+        categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
         if len(categorical_cols) > 0:
             stats["categorical_statistics"] = {}
             for col in categorical_cols:
                 value_counts = df[col].value_counts().to_dict()
+                mode_value = df[col].mode().iloc[0] if not df[col].mode().empty else None
                 stats["categorical_statistics"][col] = {
                     "unique_count": int(df[col].nunique()),
-                    "mode": str(df[col].mode().iloc[0]) if not df[col].mode().empty else None,
-                    "top_values": dict(list(value_counts.items())[:10])
+                    "mode": str(mode_value) if mode_value is not None else None,
+                    "mode_count": int(value_counts.get(mode_value, 0)) if mode_value is not None else 0,
+                    "top_values": dict(list(value_counts.items())[:10]),
+                    "null_count": int(null_counts.get(col, 0)),
+                    "null_percentage": float(null_percentages.get(col, 0)),
                 }
         
         # Correlation matrix (if numeric columns exist)
         if len(numeric_cols) >= 2:
             corr_matrix = df[numeric_cols].corr().to_dict()
             stats["correlations"] = corr_matrix
+        
+        # Data quality summary
+        stats["data_quality"] = {
+            "completeness": float(100 - null_percentage_total),
+            "uniqueness": float(100 - duplicate_percentage),
+            "has_nulls": total_nulls > 0,
+            "has_duplicates": duplicate_count > 0,
+            "numeric_columns": len(numeric_cols),
+            "categorical_columns": len(categorical_cols),
+        }
         
         return stats
     

@@ -94,11 +94,16 @@ class LangGraphCoordinator:
         try:
             collector_output = state.get("data_collector_output", {})
             datasets = collector_output.get("datasets", {})
+            user_query = state.get("user_query", "")
             
             if not datasets:
                 raise ValueError("No datasets from collector")
             
-            insights = self.analyst.analyze(datasets, generate_visualizations=True)
+            insights = self.analyst.analyze(
+                datasets, 
+                generate_visualizations=True,
+                query=user_query
+            )
             
             return {
                 "analyst_output": insights,
